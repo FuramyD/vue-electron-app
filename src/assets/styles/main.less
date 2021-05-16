@@ -1,0 +1,41 @@
+
+@import "variables";
+
+.control {
+    padding: 0 10px;
+    font-size: 18px;
+    border: 2px solid @medium-color;
+    border-radius: 4px;
+    outline: none;
+
+    transition: border-color .1s linear;
+
+    &:focus {
+        border-color: @dark-color;
+    }
+}
+
+.back {
+    width: 32px;
+    height: 32px;
+
+    outline: none;
+    border: none;
+    border-radius: 50%;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    color: @dark-color;
+
+    transition: color .1s, background-color .1s;
+
+    &:hover {
+        color: @active-color;
+    }
+
+    &:active {
+        background-color: #ccc;
+    }
+}
