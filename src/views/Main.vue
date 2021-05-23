@@ -10,25 +10,19 @@
 
         <div class="main__body">
             <div class="start">
-                <input class="control" type="text" id="name" placeholder="name" />
-                <button id="start">start</button>
+                <input class="control" type="text" id="name" placeholder="name" v-model="name"/>
+                <button id="start" @click="start">start</button>
             </div>
             <div class="right-side">
                 <div class="scripts">
                     <div class="list">
-                        <div class="script">Сценарий 1</div>
-                        <div class="script">Сценарий 2</div>
-                        <div class="script">Сценарий 3</div>
-                        <div class="script">Сценарий 4</div>
-                        <div class="script">Сценарий 4</div>
-                        <div class="script">Сценарий 4</div>
-                        <div class="script">Сценарий 4</div>
-                        <div class="script">Сценарий 4</div>
-                        <div class="script">Сценарий 4</div>
+                        <div class="script" :class="{active: activeScriptId === script.id}"
+                             v-for="(script, index) of getScripts" :key="index"
+                             @click="choiceScript(script.id)">Сценарий {{ script.id }}</div>
                     </div>
                 </div>
                 <div class="time">
-                    <input class="control" type="text" id="time" placeholder="time" />
+                    <input class="control" type="text" id="time" readonly placeholder="time" style="text-align: center" :value="getScripts.find(s => s.id === activeScriptId)?.time || '00:00'"/>
                 </div>
             </div>
         </div>
@@ -37,23 +31,36 @@
 
 <script>
     import Shield from "../components/icons/Shield"
+    import { mapGetters } from "vuex";
     export default {
         name: "Main",
-        data() {
-            return {
-
-            }
-        },
-        methods: {
-
-        },
         components: {
             Shield,
         },
+        data() {
+            return {
+                activeScriptId: -1,
+                name: ''
+            }
+        },
+        methods: {
+            start() {
+                const data = {
+                    name: this.name,
+                    scriptId: this.activeScriptId,
+                    time: this.getScripts.find(s => s.id === this.activeScriptId)?.time
+                }
+                this.$store.dispatch('start', data)
+            },
+            choiceScript(id) {
+                this.activeScriptId = id
+            }
+        },
+        computed: {
+            ...mapGetters(['getScripts'])
+        },
         async mounted() {
-            const { ipcRenderer } = window
-            const res = await ipcRenderer.invoke('loaded')
-            console.log(res);
+            await this.$store.dispatch('requestScripts')
         }
     };
 </script>

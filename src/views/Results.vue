@@ -1,6 +1,6 @@
 <template>
     <div class="results">
-        <Back class="back" @click="historyBack"/>
+        <router-link to="/"><Back class="back" /></router-link>
         <h2 class="title">Результаты</h2>
         <table class="results-table">
             <thead>
@@ -9,19 +9,20 @@
                 <th scope="col">Результат</th>
             </thead>
             <tbody>
-                <tr v-for="(row, i) of table" :key="i">
+                <tr v-for="(row, i) of getResult" :key="i">
                     <td>{{ row.entered }}</td>
                     <td>{{ row.script }}</td>
                     <td>{{ row.entered === row.script ? '+' : '-' }}</td>
                 </tr>
             </tbody>
         </table>
-        <button class="play-again">play again</button>
+<!--        <button class="play-again">play again</button>-->
     </div>
 </template>
 
 <script>
     import Back from "../components/icons/Back";
+    import {mapGetters} from "vuex";
     export default {
         name: "Results",
         components: {Back},
@@ -29,75 +30,23 @@
             historyBack() {
                 this.$router.go(-1)
             },
+            goToMain() {
+                this.$router.push('/')
+            },
             onPress(e) {
                 console.log(e)
             }
         },
         mounted() {
-            window.onkeypress = this.onPress
+            // setTimeout(console.log,1000, this.getResult)
+            console.log(this.getResult)
         },
         data() {
             return {
-                table: [
-                    {
-                        entered: 'A',
-                        script: 'A',
-                    },
-                    {
-                        entered: 'B',
-                        script: 'B',
-                    },
-                    {
-                        entered: 'C',
-                        script: 'A',
-                    },
-                    {
-                        entered: 'B',
-                        script: 'B',
-                    },
-                    {
-                        entered: 'B',
-                        script: 'B',
-                    },
-                    {
-                        entered: 'B',
-                        script: 'B',
-                    },
-                    {
-                        entered: 'B',
-                        script: 'B',
-                    },
-                    {
-                        entered: 'B',
-                        script: 'B',
-                    },
-                    {
-                        entered: 'B',
-                        script: 'B',
-                    },
-                    {
-                        entered: 'C',
-                        script: 'A',
-                    },
-                    {
-                        entered: 'B',
-                        script: 'B',
-                    },
-                    {
-                        entered: 'B',
-                        script: 'B',
-                    },
-                    {
-                        entered: 'B',
-                        script: 'B',
-                    },
-                    {
-                        entered: 'B',
-                        script: 'B',
-                    },
-                ]
+
             }
-        }
+        },
+        computed: mapGetters(['getResult'])
     };
 </script>
 

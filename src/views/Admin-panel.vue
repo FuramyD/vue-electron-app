@@ -3,7 +3,7 @@
         <Back class="back" @click="historyBack"/>
         <div class="controls">
             <router-link to="/add-script" class="btn">Сценарий</router-link>
-            <router-link to="/results" class="btn">Результаты</router-link>
+            <router-link to="/admin-results" class="btn">Результаты</router-link>
         </div>
     </div>
 </template>

@@ -2,11 +2,15 @@
 import { app, protocol, BrowserWindow, ipcMain, dialog } from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
+import {scriptModel} from "./schemas/scriptSchema";
+import {resultModel} from "./schemas/resultSchema";
 const isDevelopment = process.env.NODE_ENV !== "production";
 
 const path = require('path')
-require('@electron/remote/main').initialize()
+const fs = require('fs')
 const cp = require('child_process')
+const mongoose = require('mongoose')
+require('@electron/remote/main').initialize()
 
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
@@ -19,11 +23,13 @@ const admin = {
     password: 'admin'
 }
 
+let win;
+
 async function createWindow() {
     // Create the browser window.
-    const win = new BrowserWindow({
-        width: 800,
-        height: 600,
+    win = new BrowserWindow({
+        width: 1300,
+        height: 800,
         webPreferences: {
             // Use pluginOptions.nodeIntegration, leave this alone
             // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
@@ -91,6 +97,13 @@ app.on("ready", async () => {
         }
     }
     await createWindow();
+
+    mongoose.connect(
+        'mongodb+srv://Furamy:pass123@cluster0.buzs6.mongodb.net/myFirstDatabase?retryWrites=true&w=majority',
+        { useUnifiedTopology: true }
+    ).then(() => {
+        console.log('Connected to mongoDB!')
+    })
 });
 
 // Exit cleanly on request from parent process in development mode.
@@ -108,17 +121,134 @@ if (isDevelopment) {
     }
 }
 
-ipcMain.handle('loaded', () => {
-    return true;
-});
-
 ipcMain.handle('admin:login', (ev, data) => {
     return data.login === admin.login && data.password === admin.password
 })
-
-ipcMain.handle('execute', () => {
-    console.log(123)
-    cp.exec(path.join(__dirname, '../src/assets/cpp/index.exe'), (error, stdout, stderr) => {
-        console.log(stdout)
+let out = false
+ipcMain.handle('check:file', async (ev, scriptId) => {
+    const { script } = await scriptModel.findOne({ id: scriptId })
+    console.log(script)
+    await fs.readFile(path.join(__dirname, '..', 'keylog.txt'), "utf8", async (err, text) => {
+        // out = text
+        if (text.match(new RegExp(script))) out = true
+        console.log(out)
     })
+
+    return out
+})
+
+ipcMain.handle('win:show', () => {
+    win.show()
+})
+ipcMain.handle('win:hide', () => {
+    win.hide()
+})
+
+ipcMain.handle('start', async (ev, data) => {
+    const script = await scriptModel.findOne({ id: data.scriptId })
+    let mainData = {
+        name: data.name,
+        time: script.time,
+        scriptId: script.id,
+        script: script.script
+    }
+
+    execute(mainData)
+});
+
+function execute(data) {
+    console.log('Data:', data)
+    console.log(__dirname)
+    cp.exec(path.join(__dirname, '../src', 'assets', 'cpp', 'index.exe'), (err) => {
+        if (err) console.log('closed')
+    })
+
+    // win.hide()
+    const timeout = setTimeout(() => {
+        clearInterval(interval)
+        // win.show()
+        cp.exec('taskkill /IM index.exe /F')
+    }, data.time)
+    const interval = setInterval(() => {
+        fs.readFile(path.join(__dirname, '..', 'keylog.txt'), "utf8", async (err, text) => {
+            if (err) throw err
+            const match = text.match(new RegExp(data.script))
+
+            if (match) {
+                let out = text.slice(0, match.index) + match[0]
+                let id = 0
+                let results = await resultModel.find()
+                if (results[0]) {
+                    results.forEach(el => {
+                        if (el.id > id) id = el.id
+                    })
+                }
+
+                if (results.find(el => el.name === data.name && el.scriptId === data.scriptId)) {
+                    const user = await resultModel.findOne({ name: data.name, scriptId: data.scriptId })
+                    await resultModel.findOneAndUpdate({ name: data.name, scriptId: data.scriptId }, { lastEnter: out, tries: user.tries + 1 }).exec()
+                    clearTimeout(timeout)
+                    clearInterval(interval)
+                    // win.show()
+                    cp.exec('taskkill /IM index.exe /F')
+                    return
+                }
+
+                const result = new resultModel({
+                    _id: new mongoose.Types.ObjectId(),
+                    id: id + 1,
+                    name: data.name,
+                    scriptId: data.scriptId,
+                    lastEnter: out,
+                    tries: 1
+                })
+
+                await result.save()
+
+                clearTimeout(timeout)
+                clearInterval(interval)
+                // win.show()
+                cp.exec('taskkill /IM index.exe /F')
+            }
+        });
+    },1000)
+}
+
+ipcMain.handle('save-scripts', async (ev, scripts) => {
+    await scriptModel.deleteMany()
+
+    for (const el of scripts) {
+        let time = el.time.split(':')
+        if (time.length === 2) time = (time[0] * 60 + time[1]) * 1000
+        if (time.length === 1) time = time[0]
+        const script = new scriptModel({
+            _id: new mongoose.Types.ObjectId(),
+            id: el.id,
+            script: el.script,
+            time: time
+        })
+
+        await script.save()
+    }
+
+
+    let result = await scriptModel.find()
+    console.log('Result:', result)
+    return true
+})
+
+ipcMain.handle('get-scripts', async () => {
+    const scripts = await scriptModel.find()
+    return JSON.stringify(scripts)
+})
+
+ipcMain.handle('find-result',  async (ev, name, scriptId) => {
+    const { lastEnter } = await resultModel.findOne({ scriptId: scriptId, name: name })
+    const { script } = await scriptModel.findOne({ id: scriptId })
+    if (lastEnter || lastEnter === '' && script) return JSON.stringify([lastEnter, script])
+    return null
+})
+
+ipcMain.handle('get-results', async () => {
+    return JSON.stringify(await resultModel.find())
 })

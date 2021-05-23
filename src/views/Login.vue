@@ -13,7 +13,7 @@
             <form @submit.prevent="signIn">
                 <label>
                     Login
-                    <input class="control" type="text" id="login" v-model="login" />
+                    <input class="control" type="text" id="login" v-model="login"/>
                 </label>
                 <label>
                     Password
@@ -22,7 +22,6 @@
                 <button id="sign-in" class="submit" type="submit">login</button>
             </form>
         </div>
-        <button @click="execute">c++ execute</button>
     </div>
 </template>
 
@@ -35,8 +34,8 @@
         data() {
             return {
                 count: 1,
-                login: '',
-                password: '',
+                login: 'admin',
+                password: 'admin',
                 error: '',
                 ipcRenderer: null
             };
@@ -56,10 +55,6 @@
                     await this.$router.push('/admin')
                 else this.error = 'Непавильный логин или пароль, попробуйте еще раз'
             },
-
-            execute() {
-                this.ipcRenderer.invoke('execute')
-            }
         },
         created() {
             this.ipcRenderer = window.ipcRenderer
