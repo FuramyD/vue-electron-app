@@ -3,12 +3,13 @@
 </template>
 
 <script>
-export default {
-  name: "App",
-  async mounted() {
-    await this.$store.dispatch('requestScripts')
-  }
-};
+  export default {
+    name: "App",
+    async mounted() {
+      window.ipcRenderer = require('electron').ipcRenderer
+      await this.$store.dispatch('requestScripts')
+    }
+  };
 </script>
 
 <style lang="less">

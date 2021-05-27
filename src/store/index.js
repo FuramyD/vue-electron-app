@@ -15,7 +15,6 @@ export default createStore({
             ctx.commit('setScripts', scripts)
         },
         async saveScripts(ctx, scripts) {
-            console.log(scripts)
             await ipcRenderer.invoke('save-scripts', scripts)
         },
         async start(ctx, data) {
@@ -28,7 +27,7 @@ export default createStore({
 
             await ipcRenderer.invoke('start', data)
             await ipcRenderer.invoke('win:hide')
-            console.log(time)
+            console.log('You had', time / 1000, 'seconds')
             const timeout = setTimeout(async () => {
                 const result = await ipcRenderer.invoke('find-result', data.name, data.scriptId)
                 console.log(result)
@@ -42,9 +41,11 @@ export default createStore({
             let interval
             setTimeout(() => {
                 interval = setInterval(async () => {
-                    const out = await ipcRenderer.invoke('check:file', data.scriptId)
-                    console.log(out)
-                    if (out) {
+                    // await ipcRenderer.invoke('test:t')
+                    const isClosed = await ipcRenderer.invoke('check:closed', data.scriptId)
+
+                    if (isClosed) {
+                        console.log('closed')
                         await ipcRenderer.invoke('win:show')
                         const result = await ipcRenderer.invoke('find-result', data.name, data.scriptId)
                         ctx.commit('setResult', JSON.parse(result))
@@ -54,7 +55,7 @@ export default createStore({
                         clearTimeout(timeout)
                         clearInterval(interval)
                     }
-                }, 5000)
+                }, 1000)
             }, 500)
         },
         async getResults(ctx) {
@@ -98,7 +99,7 @@ export default createStore({
             for (let i = 0; i < entered.length; i++) {
                 if (i > 0) {
 
-                    console.log(entered[i-1], lastLit, script[lastIndex], script[0])
+                    // console.log(entered[i-1], lastLit, script[lastIndex], script[0])
                     entered[i-1] === lastLit ? lastIndex++ : lastIndex = 0
                     let curLit = script[lastIndex]
 

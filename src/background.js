@@ -33,7 +33,7 @@ async function createWindow() {
         webPreferences: {
             // Use pluginOptions.nodeIntegration, leave this alone
             // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
-            preload: path.join(__dirname, '../src/preload.js'),
+            preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION,
             contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION,
             enableRemoteModule: true
@@ -65,7 +65,7 @@ async function createWindow() {
     } else {
         createProtocol("app");
         // Load the index.html when not in development
-        win.loadURL("app://./index.html");
+        await win.loadURL("app://./index.html"); //
     }
 }
 
@@ -124,23 +124,19 @@ if (isDevelopment) {
 ipcMain.handle('admin:login', (ev, data) => {
     return data.login === admin.login && data.password === admin.password
 })
-let out = false
-ipcMain.handle('check:file', async (ev, scriptId) => {
-    const { script } = await scriptModel.findOne({ id: scriptId })
-    console.log(script)
-    await fs.readFile(path.join(__dirname, '..', 'keylog.txt'), "utf8", async (err, text) => {
-        // out = text
-        if (text.match(new RegExp(script))) out = true
-        console.log(out)
-    })
 
-    return out
+let isClosed = false
+
+ipcMain.handle('check:closed', async () => {
+    return isClosed
 })
 
 ipcMain.handle('win:show', () => {
+    console.log('win:show')
     win.show()
 })
 ipcMain.handle('win:hide', () => {
+    console.log('win:hide')
     win.hide()
 })
 
@@ -152,7 +148,7 @@ ipcMain.handle('start', async (ev, data) => {
         scriptId: script.id,
         script: script.script
     }
-
+    isClosed = false
     execute(mainData)
 });
 
@@ -168,6 +164,7 @@ function execute(data) {
         clearInterval(interval)
         // win.show()
         cp.exec('taskkill /IM index.exe /F')
+        isClosed = true
     }, data.time)
     const interval = setInterval(() => {
         fs.readFile(path.join(__dirname, '..', 'keylog.txt'), "utf8", async (err, text) => {
@@ -191,6 +188,7 @@ function execute(data) {
                     clearInterval(interval)
                     // win.show()
                     cp.exec('taskkill /IM index.exe /F')
+                    isClosed = true
                     return
                 }
 
@@ -209,6 +207,7 @@ function execute(data) {
                 clearInterval(interval)
                 // win.show()
                 cp.exec('taskkill /IM index.exe /F')
+                isClosed = true
             }
         });
     },1000)
@@ -216,10 +215,11 @@ function execute(data) {
 
 ipcMain.handle('save-scripts', async (ev, scripts) => {
     await scriptModel.deleteMany()
+    console.log(scripts)
 
     for (const el of scripts) {
         let time = el.time.split(':')
-        if (time.length === 2) time = (time[0] * 60 + time[1]) * 1000
+        if (time.length === 2) time = (Number(time[0]) * 60 + Number(time[1])) * 1000
         if (time.length === 1) time = time[0]
         const script = new scriptModel({
             _id: new mongoose.Types.ObjectId(),
@@ -251,4 +251,9 @@ ipcMain.handle('find-result',  async (ev, name, scriptId) => {
 
 ipcMain.handle('get-results', async () => {
     return JSON.stringify(await resultModel.find())
+})
+
+
+ipcMain.handle('test:t', () => {
+    console.log('interval tick')
 })
