@@ -61,6 +61,13 @@ export default createStore({
         async getResults(ctx) {
             const res = await ipcRenderer.invoke('get-results')
             ctx.commit('setResults', res)
+        },
+        async deleteResult(ctx, result) {
+            const deleted = await ipcRenderer.invoke('delete-result', result)
+            if (deleted) {
+                ctx.commit('deleteResult', result)
+                console.log('result with id:', result.id, 'has been deleted')
+            }
         }
     },
     mutations: {
@@ -78,6 +85,9 @@ export default createStore({
         },
         setResults(state, results) {
             state.results = results
+        },
+        deleteResult(state, result) {
+            state.results = JSON.stringify(JSON.parse(state.results).filter(r => r._id !== result._id))
         }
     },
     state: {

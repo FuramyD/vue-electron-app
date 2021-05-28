@@ -2,15 +2,19 @@
 import { app, protocol, BrowserWindow, ipcMain, dialog } from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
-import {scriptModel} from "./schemas/scriptSchema";
-import {resultModel} from "./schemas/resultSchema";
+import { scriptModel } from "./schemas/scriptSchema";
+import { resultModel } from "./schemas/resultSchema";
+
 const isDevelopment = process.env.NODE_ENV !== "production";
 
 const path = require('path')
 const fs = require('fs')
 const cp = require('child_process')
 const mongoose = require('mongoose')
+
 require('@electron/remote/main').initialize()
+
+let pathToCpp
 
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
@@ -61,11 +65,13 @@ async function createWindow() {
     if (process.env.WEBPACK_DEV_SERVER_URL) {
         // Load the url of the dev server if in development mode
         await win.loadURL(process.env.WEBPACK_DEV_SERVER_URL);
+        pathToCpp = path.join(__dirname, '../src', 'assets', 'cpp', 'index.exe')
         if (!process.env.IS_TEST) win.webContents.openDevTools();
     } else {
         createProtocol("app");
         // Load the index.html when not in development
-        await win.loadURL("app://./index.html"); //
+        await win.loadURL("app://./index.html");
+        pathToCpp = "app://./cpp/index.exe"
     }
 }
 
@@ -155,7 +161,7 @@ ipcMain.handle('start', async (ev, data) => {
 function execute(data) {
     console.log('Data:', data)
     console.log(__dirname)
-    cp.exec(path.join(__dirname, '../src', 'assets', 'cpp', 'index.exe'), (err) => {
+    cp.exec(pathToCpp, (err) => {
         if (err) console.log('closed')
     })
 
@@ -253,7 +259,24 @@ ipcMain.handle('get-results', async () => {
     return JSON.stringify(await resultModel.find())
 })
 
+ipcMain.handle('delete-result', async (ev, result) => {
+    return resultModel.findByIdAndRemove(result._id)
+})
+
 
 ipcMain.handle('test:t', () => {
     console.log('interval tick')
+})
+
+const pathToConvertFile = path.join(__dirname, 'bundled', 'convertToPdf.js')
+
+ipcMain.handle('download-results', async () => {
+    const path = await dialog.showOpenDialog({
+        properties: ['openDirectory']
+    })
+    console.log('path', path)
+    if (path.canceled) return null
+    cp.exec(`node ${pathToConvertFile} ${path.filePaths}`, (err, out) => {
+        console.log('OUT:', out)
+    })
 })

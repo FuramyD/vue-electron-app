@@ -17,6 +17,9 @@
     "mongodb": "^3.6.8",
     "mongodb-client-encryption": "^1.2.3",
     "mongoose": "^5.12.10",
+    "node-downloader-helper": "^1.0.18",
+    "pdfkit": "^0.12.1",
+    "phantom": "^6.3.0",
     "vue": "^3.0.0",
     "vue-router": "^4.0.0-0",
     "vuex": "^4.0.0-0"

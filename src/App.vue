@@ -5,6 +5,9 @@
 <script>
   export default {
     name: "App",
+    created() {
+      this.$router.push('/')
+    },
     async mounted() {
       window.ipcRenderer = require('electron').ipcRenderer
       await this.$store.dispatch('requestScripts')
